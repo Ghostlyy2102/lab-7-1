@@ -1,6 +1,4 @@
-﻿// lab 7 1.cpp : Определяет точку входа для приложения.
-//
-#define _USE_MATH_DEFINES   
+﻿#define _USE_MATH_DEFINES
 #include "framework.h"
 #include "lab 7 1.h"
 #include <cmath>
@@ -33,11 +31,6 @@ LRESULT CALLBACK    WndProc(HWND, UINT, WPARAM, LPARAM);
 INT_PTR CALLBACK    About(HWND, UINT, WPARAM, LPARAM);
 void ThreadFunction(ThreadData* data);
 
-//
-//  ФУНКЦИЯ: MyRegisterClass()
-//
-//  ЦЕЛЬ: Регистрирует класс окна.
-//
 ATOM MyRegisterClass(HINSTANCE hInstance)
 {
     WNDCLASSEXW wcex;
@@ -59,19 +52,9 @@ ATOM MyRegisterClass(HINSTANCE hInstance)
     return RegisterClassExW(&wcex);
 }
 
-//
-//   ФУНКЦИЯ: InitInstance(HINSTANCE, int)
-//
-//   ЦЕЛЬ: Сохраняет маркер экземпляра и создает главное окно
-//
-//   КОММЕНТАРИИ:
-//
-//        В этой функции маркер экземпляра сохраняется в глобальной переменной, а также
-//        создается и выводится главное окно программы.
-//
 BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 {
-    hInst = hInstance; // Сохранить маркер экземпляра в глобальной переменной
+    hInst = hInstance;
 
     HWND hWnd = CreateWindowW(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW,
         CW_USEDEFAULT, 0, CW_USEDEFAULT, 0, nullptr, nullptr, hInstance, nullptr);
@@ -101,7 +84,7 @@ protected:
 public:
     Figure(int R, int VAng, int V, int Napr, COLORREF col, HWND hWnd);
     void virtual step();
-    void virtual draw(int Reg) = 0;
+    void virtual draw(HDC hdc, int Reg) = 0;
 };
 
 Figure::Figure(int R, int VAng, int V, int Napr, COLORREF col, HWND hWnd) {
@@ -163,7 +146,7 @@ protected:
 public:
     MyOtrezok(int R, int VAng, int V, int Napr, COLORREF col, HWND hWnd);
     void step();
-    void draw(int Reg);
+    void draw(HDC hdc, int Reg);
 };
 
 MyOtrezok::MyOtrezok(int R, int VAng, int V, int Napr, COLORREF col, HWND hWnd) : Figure(R, VAng, V, Napr, col, hWnd) {
@@ -183,7 +166,7 @@ void MyOtrezok::step() {
     y2 = y + R * sin(A);
 }
 
-void MyOtrezok::draw(int Reg) {
+void MyOtrezok::draw(HDC hdc, int Reg) {
     HPEN pen;
     if (Reg == 1) {
         pen = CreatePen(PS_SOLID, 1, col);
@@ -191,12 +174,10 @@ void MyOtrezok::draw(int Reg) {
     else {
         pen = CreatePen(PS_SOLID, 1, RGB(255, 255, 255));
     }
-    HDC hdc;
-    hdc = GetDC(hWnd);
-    SelectObject(hdc, pen);
-    MoveToEx(hdc, x1, y1, 0);
+    HPEN oldPen = (HPEN)SelectObject(hdc, pen);
+    MoveToEx(hdc, x1, y1, NULL);
     LineTo(hdc, x2, y2);
-    ReleaseDC(hWnd, hdc);
+    SelectObject(hdc, oldPen);
     DeleteObject(pen);
 }
 
@@ -206,7 +187,7 @@ protected:
 public:
     MyTriangle(int R, int VAng, int V, int Narp, COLORREF col, HWND hWnd);
     void step();
-    void draw(int Reg);
+    void draw(HDC hdc, int Reg);
 };
 
 MyTriangle::MyTriangle(int R, int VAng, int V, int Napr, COLORREF col, HWND hWnd) : Figure(R, VAng, V, Napr, col, hWnd) {
@@ -230,7 +211,7 @@ void MyTriangle::step() {
     p[2].y = y - R * sin(A + 5 * M_PI / 4);
 }
 
-void MyTriangle::draw(int Reg) {
+void MyTriangle::draw(HDC hdc, int Reg) {
     HPEN pen;
     if (Reg == 1) {
         pen = CreatePen(PS_SOLID, 1, col);
@@ -238,14 +219,12 @@ void MyTriangle::draw(int Reg) {
     else {
         pen = CreatePen(PS_SOLID, 1, RGB(255, 255, 255));
     }
-    HDC hdc;
-    hdc = GetDC(hWnd);
-    SelectObject(hdc, pen);
-    MoveToEx(hdc, p[0].x, p[0].y, 0);
+    HPEN oldPen = (HPEN)SelectObject(hdc, pen);
+    MoveToEx(hdc, p[0].x, p[0].y, NULL);
     LineTo(hdc, p[1].x, p[1].y);
     LineTo(hdc, p[2].x, p[2].y);
     LineTo(hdc, p[0].x, p[0].y);
-    ReleaseDC(hWnd, hdc);
+    SelectObject(hdc, oldPen);
     DeleteObject(pen);
 }
 
@@ -255,7 +234,7 @@ protected:
 public:
     MyParallelogram(int R, int VAng, int V, int Napr, COLORREF col, HWND hWnd);
     void step();
-    void draw(int Reg);
+    void draw(HDC hdc, int Reg);
 };
 
 MyParallelogram::MyParallelogram(int R, int VAng, int V, int Napr, COLORREF col, HWND hWnd) : Figure(R, VAng, V, Napr, col, hWnd) {
@@ -283,7 +262,7 @@ void MyParallelogram::step() {
     p[3].y = y - 0.8 * R * sin(A + 4 * M_PI / 3);
 }
 
-void MyParallelogram::draw(int Reg) {
+void MyParallelogram::draw(HDC hdc, int Reg) {
     HPEN pen;
     if (Reg == 1) {
         pen = CreatePen(PS_SOLID, 1, col);
@@ -291,30 +270,17 @@ void MyParallelogram::draw(int Reg) {
     else {
         pen = CreatePen(PS_SOLID, 1, RGB(255, 255, 255));
     }
-    HDC hdc;
-    hdc = GetDC(hWnd);
-    SelectObject(hdc, pen);
-    MoveToEx(hdc, p[0].x, p[0].y, 0);
+    HPEN oldPen = (HPEN)SelectObject(hdc, pen);
+    MoveToEx(hdc, p[0].x, p[0].y, NULL);
     LineTo(hdc, p[1].x, p[1].y);
     LineTo(hdc, p[2].x, p[2].y);
     LineTo(hdc, p[3].x, p[3].y);
     LineTo(hdc, p[0].x, p[0].y);
-    ReleaseDC(hWnd, hdc);
+    SelectObject(hdc, oldPen);
     DeleteObject(pen);
 }
 
-Figure* pF[10];
-
-//
-//  ФУНКЦИЯ: WndProc(HWND, UINT, WPARAM, LPARAM)
-//
-//  ЦЕЛЬ: Обрабатывает сообщения в главном окне.
-//
-//  WM_COMMAND  - обработать меню приложения
-//  WM_PAINT    - Отрисовка главного окна
-//  WM_DESTROY  - отправить сообщение о выходе и вернуться
-//
-//
+Figure* pF[9];
 
 void ThreadFunction(ThreadData* data) {
     while (running) {
@@ -322,28 +288,33 @@ void ThreadFunction(ThreadData* data) {
         {
             lock_guard<mutex> lock(DrawMutex);
             HDC hdc = GetDC(data->hWnd);
+
+            HDC hdcMem = CreateCompatibleDC(hdc);
             RECT rect;
             GetClientRect(data->hWnd, &rect);
-            HDC hdcmem = CreateCompatibleDC(hdc);
-            HBITMAP hbmmem = CreateCompatibleBitmap(hdc, rect.right, rect.bottom);
-            SelectObject(hdcmem, hbmmem);
-            FillRect(hdcmem, &rect, (HBRUSH)(COLOR_WINDOW + 1));
+            HBITMAP hbmMem = CreateCompatibleBitmap(hdc, rect.right, rect.bottom);
+            HBITMAP hbmOld = (HBITMAP)SelectObject(hdcMem, hbmMem);
 
-            for (int i = 0; i < 10; i++) {
+            FillRect(hdcMem, &rect, (HBRUSH)(COLOR_WINDOW + 1));
+
+            for (int i = 0; i < 9; i++) {
                 if (pF[i]) {
-                    pF[i]->draw(1);
+                    pF[i]->draw(hdcMem, 1);
                 }
             }
-            BitBlt(hdc, 0, 0, rect.right, rect.bottom, hdcmem, 0, 0, SRCCOPY);
 
-            DeleteObject(hbmmem);
-            DeleteDC(hdcmem);
+            BitBlt(hdc, 0, 0, rect.right, rect.bottom, hdcMem, 0, 0, SRCCOPY);
+
+            SelectObject(hdcMem, hbmOld);
+            DeleteObject(hbmMem);
+            DeleteDC(hdcMem);
             ReleaseDC(data->hWnd, hdc);
         }
-        this_thread::sleep_for(chrono::milliseconds(30));
+        this_thread::sleep_for(chrono::milliseconds(16));
     }
     delete data;
 }
+
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
     switch (message)
@@ -354,24 +325,20 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         pF[1] = new MyOtrezok(80, -2, 3, 1, RGB(0, 255, 0), hWnd);
         pF[2] = new MyOtrezok(120, 5, 7, 0, RGB(0, 0, 255), hWnd);
 
-        // Создаем 3 треугольника
         pF[3] = new MyTriangle(60, -4, 4, 1, RGB(255, 0, 255), hWnd);
         pF[4] = new MyTriangle(90, 2, 6, 0, RGB(255, 255, 0), hWnd);
         pF[5] = new MyTriangle(110, -3, 2, 1, RGB(0, 255, 255), hWnd);
 
-        // Создаем 3 параллелограмма
         pF[6] = new MyParallelogram(70, 3, 5, 0, RGB(128, 0, 128), hWnd);
         pF[7] = new MyParallelogram(100, -2, 3, 1, RGB(0, 128, 128), hWnd);
         pF[8] = new MyParallelogram(130, 4, 4, 0, RGB(128, 128, 0), hWnd);
-        pF[9] = new MyParallelogram(200, 8, 10, 1, RGB(154, 205, 50), hWnd);
 
-        for (int i = 0; i < 10; i++) {
+        for (int i = 0; i < 9; i++) {
             ThreadData* data = new ThreadData{
                 pF[i], hWnd
             };
             threads.emplace_back(ThreadFunction, data);
         }
-
         break;
 
     case WM_DESTROY:
@@ -381,7 +348,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                 thread.join();
             }
         }
-        for (int i = 0; i < 10; i++) {
+        for (int i = 0; i < 9; i++) {
             delete pF[i];
         }
         PostQuitMessage(0);
@@ -419,7 +386,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
     return (int)msg.wParam;
 }
 
-// Обработчик сообщений для окна "О программе".
 INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 {
     UNREFERENCED_PARAMETER(lParam);
