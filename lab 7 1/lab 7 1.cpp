@@ -18,6 +18,7 @@ WCHAR szWindowClass[MAX_LOADSTRING];            // имя класса глав�
 vector<thread> threads;
 mutex DrawMutex;
 bool running = true;
+HANDLE hEvent; // событие
 
 struct ThreadData {
     class Figure* figure;
@@ -30,6 +31,7 @@ BOOL                InitInstance(HINSTANCE, int);
 LRESULT CALLBACK    WndProc(HWND, UINT, WPARAM, LPARAM);
 INT_PTR CALLBACK    About(HWND, UINT, WPARAM, LPARAM);
 void ThreadFunction(ThreadData* data);
+void calculate(float n);
 
 ATOM MyRegisterClass(HINSTANCE hInstance)
 {
@@ -280,37 +282,50 @@ void MyParallelogram::draw(HDC hdc, int Reg) {
     DeleteObject(pen);
 }
 
+void calculate(float n) {
+    for (int i = 0; i < 10000; i++) {
+        n = M_PI / 5.183418 * M_PI / 100;
+    }
+}
+
 Figure* pF[9];
 
 void ThreadFunction(ThreadData* data) {
+    WaitForSingleObject(hEvent, INFINITE);
+
     while (running) {
-        data->figure->step();
-        {
-            lock_guard<mutex> lock(DrawMutex);
-            HDC hdc = GetDC(data->hWnd);
+        if (WaitForSingleObject(hEvent, 0) == WAIT_OBJECT_0) {
+            data->figure->step();
+            {
+                lock_guard<mutex> lock(DrawMutex);
+                HDC hdc = GetDC(data->hWnd);
 
-            HDC hdcMem = CreateCompatibleDC(hdc);
-            RECT rect;
-            GetClientRect(data->hWnd, &rect);
-            HBITMAP hbmMem = CreateCompatibleBitmap(hdc, rect.right, rect.bottom);
-            HBITMAP hbmOld = (HBITMAP)SelectObject(hdcMem, hbmMem);
+                HDC hdcMem = CreateCompatibleDC(hdc);
+                RECT rect;
+                GetClientRect(data->hWnd, &rect);
+                HBITMAP hbmMem = CreateCompatibleBitmap(hdc, rect.right, rect.bottom);
+                HBITMAP hbmOld = (HBITMAP)SelectObject(hdcMem, hbmMem);
 
-            FillRect(hdcMem, &rect, (HBRUSH)(COLOR_WINDOW + 1));
+                FillRect(hdcMem, &rect, (HBRUSH)(COLOR_WINDOW + 1));
 
-            for (int i = 0; i < 9; i++) {
-                if (pF[i]) {
-                    pF[i]->draw(hdcMem, 1);
+                for (int i = 0; i < 9; i++) {
+                    if (pF[i]) {
+                        pF[i]->draw(hdcMem, 1);
+                    }
                 }
+
+                BitBlt(hdc, 0, 0, rect.right, rect.bottom, hdcMem, 0, 0, SRCCOPY);
+
+                SelectObject(hdcMem, hbmOld);
+                DeleteObject(hbmMem);
+                DeleteDC(hdcMem);
+                ReleaseDC(data->hWnd, hdc);
             }
-
-            BitBlt(hdc, 0, 0, rect.right, rect.bottom, hdcMem, 0, 0, SRCCOPY);
-
-            SelectObject(hdcMem, hbmOld);
-            DeleteObject(hbmMem);
-            DeleteDC(hdcMem);
-            ReleaseDC(data->hWnd, hdc);
+            this_thread::sleep_for(chrono::milliseconds(16));
         }
-        this_thread::sleep_for(chrono::milliseconds(16));
+        else {
+            break;
+        }
     }
     delete data;
 }
@@ -320,7 +335,15 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     switch (message)
     {
     case WM_CREATE:
+        hEvent = CreateEvent(NULL, TRUE, FALSE, L"MyEvent1");
+
+        if (hEvent == NULL) {
+            MessageBox(hWnd, L"Ошибка создания события", L"Ошибка", MB_ICONERROR);
+        }
+
+
         SetTimer(hWnd, 1, 1, NULL);
+
         pF[0] = new MyOtrezok(50, 3, 5, 0, RGB(255, 0, 0), hWnd);
         pF[1] = new MyOtrezok(80, -2, 3, 1, RGB(0, 255, 0), hWnd);
         pF[2] = new MyOtrezok(120, 5, 7, 0, RGB(0, 0, 255), hWnd);
@@ -343,6 +366,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
     case WM_DESTROY:
         running = false;
+
+        SetEvent(hEvent);
+
         for (auto& thread : threads) {
             if (thread.joinable()) {
                 thread.join();
@@ -351,6 +377,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         for (int i = 0; i < 9; i++) {
             delete pF[i];
         }
+
+        CloseHandle(hEvent);
+
         PostQuitMessage(0);
         break;
 
